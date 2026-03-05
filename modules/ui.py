@@ -702,7 +702,7 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
     c4.metric("Unknown names", stats.get("unknown_names", 0))
 
     if warnings:
-        with st.expander(f"⚠️ {len(warnings)} warning(s)", expanded=True):
+        with st.expander(f"⚠️ {len(warnings)} warning(s)", expanded=False):
             for w in warnings:
                 st.write(f"• {w}")
 

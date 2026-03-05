@@ -489,38 +489,37 @@ def _assign_shifts_for_day(
             if "rank" in info and int(info["rank"]) <= metrics["final_actual"]
         ]
         
-        st.warning(f"⚠️ {len(unassigned_names)} people left unassigned on this day. Diagnosing...")
-        
-        for person_name in unassigned_names[:5]:  # Check first 5 unassigned people
-            person_row = filtered_staff[filtered_staff["STAFF NAME"] == person_name]
-            if person_row.empty:
-                continue
+        with st.expander(f"🔍 Diagnostic: {len(unassigned_names)} unassigned", expanded=False):
+            for person_name in unassigned_names[:5]:  # Check first 5 unassigned people
+                person_row = filtered_staff[filtered_staff["STAFF NAME"] == person_name]
+                if person_row.empty:
+                    continue
+                    
+                row = person_row.iloc[0]
+                role = row["ROLE"]
+                if role == "dual" and person_name in dual_assignments:
+                    role = dual_assignments[person_name]
                 
-            row = person_row.iloc[0]
-            role = row["ROLE"]
-            if role == "dual" and person_name in dual_assignments:
-                role = dual_assignments[person_name]
-            
-            no_matrix = int(row.get("No Matrix", 0)) if pd.notna(row.get("No Matrix")) else 0
-            reduced = bool(row.get("Reduced Rest OK", False))
-            
-            st.write(f"**{person_name}** ({role}, No-Matrix={no_matrix}):")
-            
-            for shift in working_list:
-                existing = shift_assignments[shift]
-                current_nm = sum(1 for s in existing if s[2] == 1)
-                balls_full = generator.no_matrix_shift_count >= generator.balls
+                no_matrix = int(row.get("No Matrix", 0)) if pd.notna(row.get("No Matrix")) else 0
+                reduced = bool(row.get("Reduced Rest OK", False))
                 
-                can_work, reason = can_staff_work_shift(
-                    person_name, role, shift, existing,
-                    prior_shifts, reduced, no_matrix,
-                    balls_full, current_nm, False  # No-Matrix rule disabled
-                )
+                st.write(f"**{person_name}** ({role}, No-Matrix={no_matrix}):")
                 
-                if not can_work:
-                    st.caption(f"  ❌ {shift}: {reason}")
-                else:
-                    st.caption(f"  ✓ {shift}: ELIGIBLE (but not assigned)")
+                for shift in working_list:
+                    existing = shift_assignments[shift]
+                    current_nm = sum(1 for s in existing if s[2] == 1)
+                    balls_full = generator.no_matrix_shift_count >= generator.balls
+                    
+                    can_work, reason = can_staff_work_shift(
+                        person_name, role, shift, existing,
+                        prior_shifts, reduced, no_matrix,
+                        balls_full, current_nm, False  # No-Matrix rule disabled
+                    )
+                    
+                    if not can_work:
+                        st.caption(f"  ❌ {shift}: {reason}")
+                    else:
+                        st.caption(f"  ✓ {shift}: ELIGIBLE (but not assigned)")
     
     # Build result dict with proper 'p' suffix for dual nurses working as medics
     # Get original roles from staff_df
