@@ -461,6 +461,21 @@ def _assign_shifts_for_day(
     
     shift_assignments = generator.generate_roster()
     
+    # SPECIAL CASE FOR NP SHIFT (Night only):
+    # NP should ONLY be staffed if N7B, N7P, N9L, and NG are ALL fully staffed (2 people each)
+    # If NP has assignments but higher shifts aren't full, move those people to unassigned
+    if not is_day_shift and "NP" in shift_assignments and shift_assignments["NP"]:
+        # Check if all higher-priority night shifts are fully staffed
+        higher_priority_full = all(
+            shift_code in shift_assignments and len(shift_assignments[shift_code]) >= 2
+            for shift_code in ["N7B", "N7P", "N9L", "NG"]
+        )
+        
+        # If higher priorities aren't all full, clear NP assignments
+        # These people will be left unassigned (correct - we can't use NP yet)
+        if not higher_priority_full:
+            shift_assignments["NP"] = []
+    
     # Build result dict with proper 'p' suffix for dual nurses working as medics
     # Get original roles from staff_df
     orig_roles = {

@@ -212,42 +212,49 @@ class RosterGenerator:
                 if ok:
                     eligible.append(shift)
 
-            # Gather preference values for eligible shifts.
+            # Build priority list with THREE-LEVEL sorting:
+            # 1. COMPLETION: Shifts with 1 person needing opposite role (CRITICAL)
+            # 2. RANK: Higher-priority shifts first (lower rank number)
+            # 3. PREFERENCE: Individual preference within same completion/rank
             prefs = []
             orig_row = self.staff_data[self.staff_data["STAFF NAME"] == name]
             if not orig_row.empty:
                 orig = orig_row.iloc[0]
                 for shift in eligible:
                     shift_rank = self.shifts[shift].get("rank", 999)
+                    existing = self.shift_assignments[shift]
+                    
+                    # CRITICAL: Does this shift have 1 person needing opposite role?
+                    # Priority 0 = needs completion (CRITICAL), 1 = empty or not applicable
+                    needs_completion = 0 if (
+                        len(existing) == 1 
+                        and role not in [x[1] for x in existing]
+                    ) else 1
+                    
+                    # Get individual preference for this shift
                     if shift in self.staff_data.columns:
                         val = orig.get(shift, 0)
                         pref_val = float(val) if pd.notna(val) and float(val) > 0 else 999
                     else:
                         pref_val = 999
-                    # Store (shift, rank, preference) tuple
-                    # We'll sort by rank first, then preference
-                    prefs.append((shift, shift_rank, pref_val))
+                    
+                    # Store (shift, completion_priority, rank, preference) tuple
+                    prefs.append((shift, needs_completion, shift_rank, pref_val))
 
-            # Sort by shift rank FIRST (lower = higher priority), 
-            # then by preference value (lower = more preferred)
-            # This ensures higher-priority shifts are filled before lower-priority ones
-            prefs.sort(key=lambda x: (x[1], x[2]))
+            # Sort by: 1) completion (0=critical), 2) rank (lower=higher priority), 3) preference
+            # This ensures: complete D7B before starting D7P, complete D7P before starting D9L, etc.
+            prefs.sort(key=lambda x: (x[1], x[2], x[3]))
 
             assigned = False
             if prefs:
-                best_shift, shift_rank, pref_val = prefs[0]
+                best_shift, completion, shift_rank, pref_val = prefs[0]
                 self.shift_assignments[best_shift].append((name, role, no_matrix))
                 self.logger.log_preference_assignment(name, best_shift, role, no_matrix, pref_val)
                 self._update_balls(best_shift, no_matrix)
                 assigned = True
             elif eligible:
-                # Prioritise any shift that already has one slot filled (critical).
-                critical = [
-                    s for s in eligible
-                    if len(self.shift_assignments[s]) == 1
-                    and role not in [x[1] for x in self.shift_assignments[s]]
-                ]
-                best_shift = (critical or eligible)[0]
+                # Shouldn't reach here with new logic, but fallback to first eligible
+                best_shift = eligible[0]
                 self.shift_assignments[best_shift].append((name, role, no_matrix))
                 self.logger.log_assignment(name, best_shift, role, no_matrix, "No preference — first available")
                 self._update_balls(best_shift, no_matrix)
