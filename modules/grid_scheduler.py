@@ -411,7 +411,7 @@ def _assign_shifts_for_day(
     """
     Assign shifts for one day using proper roster generator logic.
     
-    Returns: (assignments dict, unassigned list)
+    Returns: (assignments dict with 'p' suffix for dual nurses as medics, unassigned list)
     """
     from modules import data_manager
     from modules.roster_generator import RosterGenerator
@@ -435,6 +435,10 @@ def _assign_shifts_for_day(
     dual_assignments = data_manager.balance_dual_staff(filtered_staff, metrics)
     metrics = data_manager.recalculate_balanced_metrics(metrics, dual_assignments)
     
+    # CRITICAL FIX: Set final_actual to the total number of people needing assignments
+    # This allows half-filled vehicles instead of artificially limiting shifts
+    metrics["final_actual"] = len(staff_names)
+    
     # Run roster generator
     generator = RosterGenerator(
         filtered_staff,
@@ -447,11 +451,24 @@ def _assign_shifts_for_day(
     
     shift_assignments = generator.generate_roster()
     
-    # Build result dict: name -> shift_code
+    # Build result dict with proper 'p' suffix for dual nurses working as medics
+    # Get original roles from staff_df
+    orig_roles = {
+        row["STAFF NAME"]: row["ROLE"]
+        for _, row in filtered_staff.iterrows()
+    }
+    
     assignments: Dict[str, str] = {}
     for shift_code, staff_list in shift_assignments.items():
         for name, role, no_matrix in staff_list:
-            assignments[name] = shift_code
+            # Start with base shift code
+            final_code = shift_code
+            
+            # Add lowercase 'p' suffix if this is a dual (nurse) working as medic
+            if role == "medic" and orig_roles.get(name) == "dual":
+                final_code = shift_code + "p"
+            
+            assignments[name] = final_code
     
     # Find who didn't get assigned
     unassigned = [name for name in staff_names if name not in assignments]
