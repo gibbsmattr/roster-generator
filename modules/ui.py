@@ -8,18 +8,274 @@ Layout priority:
 
 import streamlit as st
 import pandas as pd
+import urllib.request
 from typing import Dict, List, Tuple
 
 from modules.config import DAY_SHIFTS, NIGHT_SHIFTS, ORG_NAME, PAGE_LAYOUT, PAGE_ICON
 
+# ---------------------------------------------------------------------------
+# GitHub preferences URL — update this to point to your raw file
+# ---------------------------------------------------------------------------
+GITHUB_PREFS_URL = (
+    "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/Preferences/preferences.xlsx"
+)
 
 # ---------------------------------------------------------------------------
 # Page setup
 # ---------------------------------------------------------------------------
 
+_CUSTOM_CSS = """
+<style>
+/* ── Global typography & background ─────────────────────────────────── */
+html, body, [class*="css"] {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* Subtle dark-navy header bar */
+[data-testid="stHeader"] {
+    background: #0f172a;
+}
+
+/* App background — very light blue-grey */
+.stApp {
+    background-color: #f1f5f9;
+}
+
+/* ── Main content card feel ─────────────────────────────────────────── */
+section[data-testid="stMain"] > div {
+    padding-top: 1.2rem;
+}
+
+/* ── Title ──────────────────────────────────────────────────────────── */
+h1 {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.5px;
+    font-size: 1.9rem !important;
+    border-bottom: 3px solid #3b82f6;
+    padding-bottom: 0.4rem;
+    margin-bottom: 1rem !important;
+}
+
+/* ── Subheadings ────────────────────────────────────────────────────── */
+h2, h3 {
+    color: #1e3a5f !important;
+    font-weight: 600 !important;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────── */
+[data-testid="stTabs"] [role="tab"] {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #475569;
+    padding: 0.5rem 1.1rem;
+    border-radius: 6px 6px 0 0;
+}
+[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+    color: #1d4ed8 !important;
+    border-bottom: 3px solid #3b82f6 !important;
+    background: #eff6ff;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
+/* Generate / primary → blue */
+div.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    padding: 0.55rem 1.4rem !important;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.35) !important;
+    transition: all 0.15s ease !important;
+}
+div.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.45) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Clear / secondary → red */
+div.stButton > button[kind="secondary"] {
+    background: white !important;
+    color: #dc2626 !important;
+    border: 2px solid #dc2626 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    padding: 0.55rem 1.4rem !important;
+    transition: all 0.15s ease !important;
+}
+div.stButton > button[kind="secondary"]:hover {
+    background: #fef2f2 !important;
+    box-shadow: 0 2px 8px rgba(220,38,38,0.2) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ── Expanders ──────────────────────────────────────────────────────── */
+[data-testid="stExpander"] {
+    background: white;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+[data-testid="stExpander"] summary {
+    font-weight: 600;
+    color: #1e3a5f;
+    padding: 0.6rem 1rem;
+}
+
+/* ── Text areas ─────────────────────────────────────────────────────── */
+textarea {
+    border-radius: 8px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    font-size: 0.85rem !important;
+    background: #fafcff !important;
+}
+textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+}
+
+/* ── DataFrames / tables ─────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+/* ── Metrics ────────────────────────────────────────────────────────── */
+[data-testid="stMetric"] {
+    background: white;
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+[data-testid="stMetricLabel"] { color: #64748b !important; font-weight: 500 !important; }
+[data-testid="stMetricValue"] { color: #0f172a !important; font-weight: 700 !important; }
+
+/* ── Info / warning / success banners ──────────────────────────────── */
+[data-testid="stAlert"] {
+    border-radius: 8px !important;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: #1e3a5f !important;
+}
+[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+
+/* ── Status / badge chips for prefs source ──────────────────────────── */
+.prefs-badge {
+    display: inline-block;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+.badge-github { background: #dcfce7; color: #15803d; }
+.badge-upload { background: #dbeafe; color: #1d4ed8; }
+.badge-none   { background: #fee2e2; color: #dc2626; }
+</style>
+"""
+
 def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
+    st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
+
+
+# ---------------------------------------------------------------------------
+# Preferences loading (GitHub auto-fetch + manual upload fallback)
+# ---------------------------------------------------------------------------
+
+def _try_load_github_prefs() -> pd.DataFrame | None:
+    """Attempt to fetch the preferences file from GitHub. Returns None on failure."""
+    try:
+        from modules import data_manager
+        import io
+        req = urllib.request.Request(
+            GITHUB_PREFS_URL,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            raw = resp.read()
+        df = data_manager.load_staff_data(io.BytesIO(raw))
+        return df
+    except Exception:
+        return None
+
+
+def render_preferences_section():
+    """
+    Preferences loader shown above the tabs.
+    1. On first load, silently try to fetch from GitHub.
+    2. Show the current source + a manual upload option.
+    3. Manual upload always wins if the user provides a file.
+    """
+    from modules import data_manager
+
+    # ── Auto-fetch from GitHub on startup ───────────────────────────────
+    if st.session_state.get("staff_data_cache") is None and \
+       st.session_state.get("prefs_source") is None:
+        with st.spinner("Loading staff preferences from GitHub…"):
+            df = _try_load_github_prefs()
+        if df is not None:
+            st.session_state.staff_data_cache = df
+            st.session_state.prefs_source = "github"
+            st.session_state.uploaded_filename = "preferences.xlsx (GitHub)"
+
+    # ── Status badge ─────────────────────────────────────────────────────
+    source = st.session_state.get("prefs_source")
+    fname  = st.session_state.get("uploaded_filename", "")
+
+    if source == "github":
+        badge = '<span class="prefs-badge badge-github">✓ GitHub</span>'
+        status_msg = f"Staff preferences loaded from GitHub {badge}"
+    elif source == "upload":
+        badge = '<span class="prefs-badge badge-upload">✓ Uploaded</span>'
+        status_msg = f"Staff preferences loaded: **{fname}** {badge}"
+    else:
+        badge = '<span class="prefs-badge badge-none">⚠ Not loaded</span>'
+        status_msg = f"No preferences file loaded {badge}"
+
+    with st.expander(
+        f"📋 Staff Preferences File — {'loaded' if source else 'not loaded'}",
+        expanded=(source is None),
+    ):
+        st.markdown(status_msg, unsafe_allow_html=True)
+
+        if source == "github":
+            st.caption(f"Source: `{GITHUB_PREFS_URL}`")
+
+        st.markdown("**Upload a new preferences file** (replaces current):")
+        uploaded = st.file_uploader(
+            "Upload preferences (.xlsx)",
+            type=["xlsx"],
+            key="prefs_uploader",
+            label_visibility="collapsed",
+        )
+        if uploaded is not None:
+            try:
+                df = data_manager.load_staff_data(uploaded)
+                st.session_state.staff_data_cache = df
+                st.session_state.prefs_source = "upload"
+                st.session_state.uploaded_filename = uploaded.name
+                st.success(f"✅ Loaded **{uploaded.name}** — {len(df)} staff members.")
+            except Exception as e:
+                st.error(f"Failed to load file: {e}")
+
+        if source is not None:
+            n = len(st.session_state.staff_data_cache)
+            st.caption(f"{n} staff members currently loaded.")
 
 
 # ---------------------------------------------------------------------------
@@ -119,11 +375,11 @@ def pre_assignment_section(day_staff: List[str], night_staff: List[str]) -> Dict
 # ---------------------------------------------------------------------------
 
 def control_buttons() -> Tuple[bool, bool]:
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([3, 1])
     with col1:
         generate = st.button("▶ Generate Roster", type="primary", use_container_width=True)
     with col2:
-        clear = st.button("✖ Clear & Start Over", use_container_width=True)
+        clear = st.button("✖ Clear & Reset", type="secondary", use_container_width=True)
         if clear:
             st.session_state.clear_staff_inputs = True
             st.session_state.staff_assignments  = {}
@@ -369,8 +625,116 @@ def convert_df_to_csv(df: pd.DataFrame) -> bytes:
 # Two-Week Scheduler tab
 # ---------------------------------------------------------------------------
 
+def grid_scheduler_section() -> Tuple[str, bool]:
+    """Paste-grid interface for the two-week scheduler."""
+    st.subheader("Two-Week Schedule Builder")
+
+    with st.expander("📋 How to use this", expanded=False):
+        st.markdown("""
+**Step 1** — In your Excel template, select the **Name column** plus the **16 day columns**
+(2 prior days + 14 current days). Copy them.
+
+**Step 2** — Paste into the box below. Each row should be tab-separated, exactly as Excel copies it.
+
+**Step 3** — Hit **Build Schedule**. The app will fill every bare **D** or **N** cell with a
+specific shift code based on each person's preferences, rest rules, and consecutive-shift limits.
+
+**Step 4** — Copy the output grid and paste it back into Excel.
+
+---
+**What counts as a bare D or N (will be assigned):**
+`D`, `N`, `D/N`, `D*`, `*D`, `D#`, `#D`, `ON D`, `D1*`, `D2*`, `D3*`
+
+**What is left alone (already assigned):**
+Any specific shift code like `D7B`, `N9L`, `MG`, etc.
+
+**What is skipped (non-working — not counted toward consecutive limits):**
+`LT`, `LT-D`, `LT-N`, `SM`, `SIM`, `AT`, `Clinical`, `LOA`, blank cells, etc.
+""")
+
+    pasted = st.text_area(
+        "Paste your schedule grid here (name + 16 columns, tab-separated)",
+        height=320,
+        key="grid_paste",
+        placeholder="Smith J.\tN7P\tN7P\tD\tD\t\tN\tN\t...\nGarcia M.\tD7B\t\tD\tD\tN\tN\t\t...",
+    )
+
+    run_btn = st.button(
+        "▶ Build Schedule",
+        type="primary",
+        disabled=not bool(pasted and pasted.strip()),
+        key="grid_run",
+    )
+    return pasted, run_btn
+
+
+def display_grid_results(names: List[str], output_grid: List[List[str]],
+                          warnings: List[str], stats: Dict):
+    """Show stats, warnings, copyable output grid, and a visual table."""
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Staff rows", stats.get("total_staff", 0))
+    c2.metric("Shifts assigned", stats.get("assigned", 0))
+    c3.metric("Left unresolved", stats.get("unresolved", 0))
+    c4.metric("Unknown names", stats.get("unknown_names", 0))
+
+    if warnings:
+        with st.expander(f"⚠️ {len(warnings)} warning(s)", expanded=True):
+            for w in warnings:
+                st.write(f"• {w}")
+
+    st.markdown("---")
+    st.markdown("### Output grid — copy this back into Excel")
+    st.caption(
+        "Select all text below (Ctrl+A / Cmd+A inside the box), copy, "
+        "then paste into the matching cells in Excel."
+    )
+
+    lines = []
+    for name, row in zip(names, output_grid):
+        lines.append(name + "\t" + "\t".join(row))
+    grid_text = "\n".join(lines)
+
+    st.text_area(
+        "Output (tab-separated, paste into Excel)",
+        value=grid_text,
+        height=340,
+        key="grid_output",
+        label_visibility="collapsed",
+    )
+
+    st.markdown("---")
+    st.markdown("### Visual check — current 14 days")
+    st.caption("Prior 2 days not shown. Day/Night shifts shown as codes only.")
+
+    from modules.grid_scheduler import DAY_CODES, NIGHT_CODES
+    from modules.config import ALL_SHIFTS as _AS
+
+    def _cell_icon(val: str) -> str:
+        v = val.strip()
+        if not v:
+            return "—"
+        if v in _AS:
+            return v  # Just return the shift code without emoji
+        vu = v.upper()
+        if vu in ("D", "D/N") or vu.startswith("D") or vu == "N":
+            return v  # Just return the value without emoji
+        return v
+
+    table_rows = []
+    for name, row in zip(names, output_grid):
+        current = row[2:]
+        table_rows.append(
+            {"Name": name} | {f"Day {i+1}": _cell_icon(current[i]) for i in range(14)}
+        )
+
+    df = pd.DataFrame(table_rows)
+    st.dataframe(df, hide_index=True, use_container_width=True,
+                 height=min(60 + len(names)*35, 700))
+
+
 def two_week_scheduler_section():
-    """Upload widget and instructions for the two-week scheduler."""
+    """DEPRECATED — redirects to grid_scheduler_section."""
     st.subheader("Two-Week Schedule Builder")
     st.markdown(
         "Upload your two-week schedule template (the Excel file with staff rows and 14 date columns). "
@@ -432,3 +796,80 @@ def display_two_week_results(summary: Dict, sheet_name: str, excel_bytes: bytes)
                         st.write(f"• {shift_code}: {name}")
                     else:
                         st.markdown(f"• **{shift_code}: OPEN** 🔴")
+
+
+# ---------------------------------------------------------------------------
+# Two-Week Paste Scheduler tab
+# ---------------------------------------------------------------------------
+
+def two_week_paste_section():
+    """UI for the paste-grid two-week scheduler."""
+    st.markdown(
+        "Copy a rectangle of cells directly from your Excel template and paste below. "
+        "The app fills in every **D** and **N** cell with a specific shift code, "
+        "then gives you the completed grid to paste straight back."
+    )
+    st.divider()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Paste 1 — Schedule Grid**")
+        st.caption("Select: Name column + 2 prior-period cols + 14 working-day cols → Cmd+C → paste here")
+        grid_text = st.text_area(
+            "grid", height=420, key="paste_grid_input",
+            placeholder="Gallagher\t\t\t\t\tSM\tN7P\tN7P ...",
+            label_visibility="collapsed",
+        )
+    with col2:
+        st.markdown("**Paste 2 — Staff Metadata**")
+        st.caption("Select: Name, Matrix, Flex, 10h Turn, Wk1, Wk2, B, H, L, P, M, B, L, P → Cmd+C → paste here (include header row)")
+        meta_text = st.text_area(
+            "meta", height=420, key="paste_meta_input",
+            placeholder="Name\tMatrix\tFlex\t10h Turn\tWk1\tWk2\tB\tH\tL\tP\tM\tB\tL\tP\nGallagher\ta\tYes\t\t3\t3\t2\t5\t3\t1\t3\t2\t3\t1",
+            label_visibility="collapsed",
+        )
+
+    st.markdown("**Start date of the 14-day window** (used for column headers only)")
+    from datetime import date as date_cls
+    start_date_val = st.date_input("start", key="paste_start_date", label_visibility="collapsed")
+
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        run_btn = st.button(
+            "▶ Generate Schedule", type="primary",
+            use_container_width=True, key="paste_run_btn",
+            disabled=(not grid_text.strip()),
+        )
+    with c2:
+        if st.button("✖ Clear", type="secondary", use_container_width=True, key="paste_clear_btn"):
+            for k in ("paste_grid_input", "paste_meta_input"):
+                st.session_state.pop(k, None)
+            st.rerun()
+
+    return grid_text, meta_text, start_date_val, run_btn
+
+
+def display_paste_results(output_grid: str, summary: Dict):
+    """Show summary stats and the completed grid ready to copy back to Excel."""
+    if summary["open"] == 0:
+        st.success(f"✅ All {summary['filled']} shifts assigned — fill rate {summary['fill_rate']}")
+    else:
+        st.warning(
+            f"⚠️ {summary['filled']} shifts assigned, **{summary['open']} still open** "
+            f"— fill rate {summary['fill_rate']}"
+        )
+    if summary["meta_matched"] < summary["staff_count"]:
+        unmatched = summary["staff_count"] - summary["meta_matched"]
+        st.info(
+            f"ℹ️ {unmatched} staff member(s) had no metadata match — skipped. "
+            "Check that names in both pastes match exactly."
+        )
+    st.markdown(f"**{summary['staff_count']} staff** · "
+                f"**{summary['meta_matched']} with metadata**")
+    st.divider()
+    st.markdown("### Completed grid — select all and paste back into Excel")
+    st.caption("Click inside the box → Cmd+A → Cmd+C")
+    st.text_area(
+        "output", value=output_grid, height=520,
+        key="paste_output_area", label_visibility="collapsed",
+    )
