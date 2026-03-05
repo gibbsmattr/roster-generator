@@ -265,12 +265,14 @@ def parse_grid(text: str) -> Tuple[List[str], List[List[str]]]:
 def run_grid_scheduler(
     pasted_text: str,
     staff_df: pd.DataFrame,
+    night_only: bool = False,
 ) -> Tuple[List[str], List[List[str]], List[str], Dict]:
     """
     Parameters
     ----------
     pasted_text : tab-separated grid from Excel
     staff_df    : preferences DataFrame (from session_state.staff_data_cache)
+    night_only  : if True, only assign N markers, leave D markers as-is
 
     Returns
     -------
@@ -361,8 +363,8 @@ def run_grid_scheduler(
             if prev_day in person_shift_by_day[name]:
                 prior_shifts_day[name] = person_shift_by_day[name][prev_day]
         
-        # Process day shifts for this day
-        if day_needs:
+        # Process day shifts for this day (unless night_only mode)
+        if day_needs and not night_only:
             day_assignments, day_unassigned = _assign_shifts_for_day(
                 day_needs, staff_df, prior_shifts_day, True, staff_lookup
             )

@@ -191,7 +191,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 10.0 - Fixed Rest Period Calculations")
+    st.caption("Version 11.0 - Night-Only Mode & Interactive Editing")
 
 
 # ---------------------------------------------------------------------------
@@ -648,7 +648,7 @@ def convert_df_to_csv(df: pd.DataFrame) -> bytes:
 # Two-Week Scheduler tab
 # ---------------------------------------------------------------------------
 
-def grid_scheduler_section() -> Tuple[str, bool]:
+def grid_scheduler_section() -> Tuple[str, bool, bool]:
     """Paste-grid interface for the two-week scheduler."""
     st.subheader("Two-Week Schedule Builder")
 
@@ -682,13 +682,20 @@ Any specific shift code like `D7B`, `N9L`, `MG`, etc.
         placeholder="Smith J.\tN7P\tN7P\tD\tD\t\tN\tN\t...\nGarcia M.\tD7B\t\tD\tD\tN\tN\t\t...",
     )
 
+    night_only = st.checkbox(
+        "🌙 Night shifts only (leave all D markers unassigned)",
+        value=False,
+        key="night_only_checkbox",
+        help="When checked, only N markers will be assigned. D markers will be left as-is."
+    )
+
     run_btn = st.button(
         "▶ Build Schedule",
         type="primary",
         disabled=not bool(pasted and pasted.strip()),
         key="grid_run",
     )
-    return pasted, run_btn
+    return pasted, run_btn, night_only
 
 
 def display_grid_results(names: List[str], output_grid: List[List[str]],
@@ -728,7 +735,7 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
 
     st.markdown("---")
     st.markdown("### Visual check — current 14 days")
-    st.caption("Prior 2 days not shown. Day/Night shifts shown as codes only.")
+    st.caption("Prior 2 days not shown. Click cells to edit, then hit 'Re-run with edits' to recalculate.")
 
     from modules.grid_scheduler import DAY_CODES, NIGHT_CODES
     from modules.config import ALL_SHIFTS as _AS
@@ -752,8 +759,41 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
         )
 
     df = pd.DataFrame(table_rows)
-    st.dataframe(df, hide_index=True, use_container_width=True,
-                 height=min(60 + len(names)*35, 700))
+    
+    # Use data_editor for editable table
+    edited_df = st.data_editor(
+        df, 
+        hide_index=True, 
+        use_container_width=True,
+        height=min(60 + len(names)*35, 700),
+        key="editable_schedule"
+    )
+    
+    # Add re-run button
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        rerun_btn = st.button("🔄 Re-run with edits", type="secondary", key="rerun_with_edits")
+    
+    if rerun_btn:
+        # Convert edited dataframe back to paste format
+        # Reconstruct full 16-column grid (add back prior 2 days)
+        new_paste_lines = []
+        for idx, (name, orig_row) in enumerate(zip(names, output_grid)):
+            # Get prior 2 days from original
+            prior_2 = orig_row[0:2]
+            # Get edited 14 days from dataframe
+            edited_row_data = edited_df.iloc[idx]
+            edited_14_days = [str(edited_row_data[f"Day {i+1}"]) for i in range(14)]
+            # Combine
+            full_row = prior_2 + edited_14_days
+            new_paste_lines.append(name + "\t" + "\t".join(full_row))
+        
+        new_paste_text = "\n".join(new_paste_lines)
+        
+        # Store in session state to trigger re-run
+        st.session_state.grid_paste = new_paste_text
+        st.session_state.rerun_requested = True
+        st.rerun()
 
 
 def two_week_scheduler_section():

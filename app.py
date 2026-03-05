@@ -83,15 +83,29 @@ with tab1:
 
 with tab3:
     from modules.grid_scheduler import run_grid_scheduler
-    pasted_grid, run_grid = ui.grid_scheduler_section()
+    
+    # Check if rerun was requested from editing
+    if st.session_state.get("rerun_requested", False):
+        pasted_grid = st.session_state.get("grid_paste", "")
+        run_grid = True
+        st.session_state.rerun_requested = False
+    else:
+        pasted_grid, run_grid, night_only = ui.grid_scheduler_section()
+        # Store night_only in session state for rerun
+        if run_grid:
+            st.session_state.night_only_mode = night_only
+    
     if run_grid and pasted_grid:
         if st.session_state.staff_data_cache is None:
             st.error("Please load a staff preferences file first (see the panel above).")
         else:
             with st.spinner("Building schedule..."):
                 try:
+                    # Get night_only setting
+                    night_only_setting = st.session_state.get("night_only_mode", False)
+                    
                     names, output_grid, warnings, stats = run_grid_scheduler(
-                        pasted_grid, st.session_state.staff_data_cache
+                        pasted_grid, st.session_state.staff_data_cache, night_only=night_only_setting
                     )
                     ui.display_grid_results(names, output_grid, warnings, stats)
                 except Exception as exc:
