@@ -319,18 +319,21 @@ def run_grid_scheduler(
     for name, cells in zip(names, rows):
         output_grid.append(list(cells))  # Start with copy of input
     
-    # Track prior shifts for each person (includes prior-2 days)
-    person_history: Dict[str, List[str]] = {name: [] for name in names}
+    # Track shifts for each person BY DAY (includes prior-2 days)
+    # Structure: {name: {day_index: shift_code}}
+    person_shift_by_day: Dict[str, Dict[int, str]] = {name: {} for name in names}
     
     # Initialize history with prior 2 days (columns 0-1)
     for idx, (name, cells) in enumerate(zip(names, rows)):
-        for i in range(2):  # Prior 2 days
+        for i in range(2):  # Prior 2 days (day -2 and day -1)
             raw = cells[i].strip()
             if raw and raw.upper() in ALL_SHIFTS:
-                person_history[name].append(raw.upper())
+                person_shift_by_day[name][i - 2] = raw.upper()  # Store as day -2, day -1
     
     # Process each of the 14 days
     for day_idx in range(2, 16):  # columns 2-15 are the 14 working days
+        current_day = day_idx - 2  # Days 0-13 (0-indexed from start of 14-day period)
+        
         # Separate day and night needs for this day
         day_needs: List[str] = []
         night_needs: List[str] = []
@@ -346,21 +349,29 @@ def run_grid_scheduler(
             elif cls == "ASSIGNED":
                 # Already has a specific code - track it for rest calc
                 code = raw.upper()
-                person_history[name].append(code)
+                person_shift_by_day[name][current_day] = code
                 # Keep it in output grid
                 output_grid[name_idx][day_idx] = code
+        
+        # Build prior_shifts dict for JUST THE IMMEDIATELY PRECEDING DAY
+        # Only include if they worked the day before (current_day - 1)
+        prior_shifts_day = {}
+        for name in names:
+            prev_day = current_day - 1
+            if prev_day in person_shift_by_day[name]:
+                prior_shifts_day[name] = person_shift_by_day[name][prev_day]
         
         # Process day shifts for this day
         if day_needs:
             day_assignments, day_unassigned = _assign_shifts_for_day(
-                day_needs, staff_df, person_history, True, staff_lookup
+                day_needs, staff_df, prior_shifts_day, True, staff_lookup
             )
             
             # Apply assignments to output grid
             for name, shift_code in day_assignments.items():
                 name_idx = names.index(name)
                 output_grid[name_idx][day_idx] = shift_code
-                person_history[name].append(shift_code)
+                person_shift_by_day[name][current_day] = shift_code
                 assigned_count += 1
             
             # Track unassigned
@@ -371,14 +382,14 @@ def run_grid_scheduler(
         # Process night shifts for this day
         if night_needs:
             night_assignments, night_unassigned = _assign_shifts_for_day(
-                night_needs, staff_df, person_history, False, staff_lookup
+                night_needs, staff_df, prior_shifts_day, False, staff_lookup
             )
             
             # Apply assignments to output grid
             for name, shift_code in night_assignments.items():
                 name_idx = names.index(name)
                 output_grid[name_idx][day_idx] = shift_code
-                person_history[name].append(shift_code)
+                person_shift_by_day[name][current_day] = shift_code
                 assigned_count += 1
             
             # Track unassigned
@@ -404,15 +415,16 @@ def run_grid_scheduler(
 def _assign_shifts_for_day(
     staff_names: List[str],
     staff_df: pd.DataFrame,
-    person_history: Dict[str, List[str]],
+    prior_shifts: Dict[str, str],  # Changed from person_history
     is_day_shift: bool,
     staff_lookup: Dict[str, pd.Series],
 ) -> Tuple[Dict[str, str], List[str]]:
     """
     Assign shifts for one day using proper roster generator logic.
-    RosterGenerator prioritizes:
-      1. Fully staffing higher-priority shifts before lower ones
-      2. Completing partially-filled shifts (critical) before starting new ones
+    
+    Args:
+        prior_shifts: Dict mapping name -> shift code from IMMEDIATELY PRECEDING DAY ONLY
+                     (not cumulative history - only yesterday's shift matters for rest)
     
     Returns: (assignments dict with 'p' suffix for dual nurses as medics, unassigned list)
     """
@@ -426,13 +438,7 @@ def _assign_shifts_for_day(
     if len(filtered_staff) == 0:
         return {}, staff_names
     
-    # Build prior_shifts dict from person_history
-    prior_shifts = {}
-    for name in staff_names:
-        history = person_history.get(name, [])
-        if history:
-            # Most recent shift is the "prior" for rest calculations
-            prior_shifts[name] = history[-1]
+    # prior_shifts is already built - it only contains shifts from yesterday
     
     # Calculate metrics and dual assignments
     metrics = data_manager.calculate_staffing_metrics(filtered_staff)

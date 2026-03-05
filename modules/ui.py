@@ -191,7 +191,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 9.0 - Diagnostic Logging Enabled")
+    st.caption("Version 10.0 - Fixed Rest Period Calculations")
 
 
 # ---------------------------------------------------------------------------
