@@ -86,6 +86,7 @@ def can_staff_work_shift(
     no_matrix: int,
     balls_full: bool = False,
     current_no_matrix_count: int = 0,
+    enforce_no_matrix_rule: bool = True,
 ) -> tuple[bool, str]:
     """
     Return ``(can_work, reason)`` for a prospective assignment.
@@ -97,7 +98,7 @@ def can_staff_work_shift(
     4. No staff-conflict pairs share the shift.
     5. Staff-specific shift restrictions are respected.
     6. No-Matrix / BALLS constraints are satisfied.
-    7. At least one No-Matrix staff member per shift is ensured.
+    7. At least one No-Matrix staff member per shift is ensured (if enforce_no_matrix_rule=True).
     """
     current_roles = [s[1] for s in current_staff]
 
@@ -145,8 +146,8 @@ def can_staff_work_shift(
     if balls_full and no_matrix == 1 and current_no_matrix_count >= 1:
         return False, "BALLS=FULL — cannot pair two No-Matrix staff on this shift"
 
-    # 7. Every shift must have at least one No-Matrix staff
-    if len(current_staff) == 1 and current_no_matrix_count == 0 and no_matrix == 0:
+    # 7. Every shift must have at least one No-Matrix staff (unless disabled for grid scheduler)
+    if enforce_no_matrix_rule and len(current_staff) == 1 and current_no_matrix_count == 0 and no_matrix == 0:
         return False, "Shift requires at least one No-Matrix staff member"
 
     return True, "Eligible"

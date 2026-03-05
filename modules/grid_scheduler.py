@@ -438,17 +438,25 @@ def _assign_shifts_for_day(
     dual_assignments = data_manager.balance_dual_staff(filtered_staff, metrics)
     metrics = data_manager.recalculate_balanced_metrics(metrics, dual_assignments)
     
+    # CRITICAL FIX for grid scheduler:
+    # Override final_actual to include ALL shifts in working_list
+    # This allows half-filled vehicles (medic without nurse or vice versa)
+    # Better to have someone assigned to a shift alone than left as "D" or "N"
+    metrics["final_actual"] = 9 if is_day_shift else 5
+    
     # Don't override final_actual - let it be calculated naturally based on role counts
     # The RosterGenerator already prioritizes completing shifts in rank order
     
     # Run roster generator with priority-based filling
+    # For grid scheduler, disable No-Matrix rule to maximize assignments
     generator = RosterGenerator(
         filtered_staff,
         prior_shifts,
         {},  # no pre-assignments for grid scheduler
         metrics,
         dual_assignments,
-        is_day_shift=is_day_shift
+        is_day_shift=is_day_shift,
+        enforce_no_matrix_rule=False,  # Allow pairing any two people to maximize assignments
     )
     
     shift_assignments = generator.generate_roster()

@@ -28,6 +28,7 @@ class RosterGenerator:
         metrics: Dict,
         dual_role_assignments: Dict[str, str],
         is_day_shift: bool = True,
+        enforce_no_matrix_rule: bool = True,
     ):
         self.staff_data           = staff_data
         self.prior_shifts         = prior_shifts
@@ -35,6 +36,7 @@ class RosterGenerator:
         self.metrics              = metrics
         self.dual_role_assignments = dual_role_assignments
         self.is_day_shift         = is_day_shift
+        self.enforce_no_matrix_rule = enforce_no_matrix_rule
         self.logger               = get_logger()
 
         self.shifts              = DAY_SHIFTS if is_day_shift else NIGHT_SHIFTS
@@ -131,7 +133,7 @@ class RosterGenerator:
                     ok, _ = can_staff_work_shift(
                         name, role, shift, current,
                         self.prior_shifts, reduced, no_matrix,
-                        balls_full, current_nm,
+                        balls_full, current_nm, self.enforce_no_matrix_rule,
                     )
                     if ok:
                         options[shift][role].append((name, no_matrix))
@@ -205,7 +207,7 @@ class RosterGenerator:
                 ok, _      = can_staff_work_shift(
                     name, role, shift, existing,
                     self.prior_shifts, reduced, no_matrix,
-                    balls_full, current_nm,
+                    balls_full, current_nm, self.enforce_no_matrix_rule,
                 )
                 if ok:
                     eligible.append(shift)
