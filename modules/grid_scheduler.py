@@ -410,6 +410,9 @@ def _assign_shifts_for_day(
 ) -> Tuple[Dict[str, str], List[str]]:
     """
     Assign shifts for one day using proper roster generator logic.
+    RosterGenerator prioritizes:
+      1. Fully staffing higher-priority shifts before lower ones
+      2. Completing partially-filled shifts (critical) before starting new ones
     
     Returns: (assignments dict with 'p' suffix for dual nurses as medics, unassigned list)
     """
@@ -435,11 +438,10 @@ def _assign_shifts_for_day(
     dual_assignments = data_manager.balance_dual_staff(filtered_staff, metrics)
     metrics = data_manager.recalculate_balanced_metrics(metrics, dual_assignments)
     
-    # CRITICAL FIX: Set final_actual to the total number of people needing assignments
-    # This allows half-filled vehicles instead of artificially limiting shifts
-    metrics["final_actual"] = len(staff_names)
+    # Don't override final_actual - let it be calculated naturally based on role counts
+    # The RosterGenerator already prioritizes completing shifts in rank order
     
-    # Run roster generator
+    # Run roster generator with priority-based filling
     generator = RosterGenerator(
         filtered_staff,
         prior_shifts,

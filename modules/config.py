@@ -18,9 +18,9 @@ DAY_SHIFTS = {
     "D11M": {"rank": 4, "start_time": "1100", "end_time": "2300"},
     "D11H": {"rank": 5, "start_time": "1100", "end_time": "2300"},
     "MG":   {"rank": 6, "start_time": "1100", "end_time": "2300"},
-    "LG":   {"rank": 7, "start_time": "0900", "end_time": "2100"},
-    "PG":   {"rank": 8, "start_time": "0700", "end_time": "1900"},
-    "GR":   {"rank": 9, "start_time": "0700", "end_time": "1900"},
+    "GR":   {"rank": 7, "start_time": "0700", "end_time": "1900"},
+    "LG":   {"rank": 8, "start_time": "0900", "end_time": "2100"},
+    "PG":   {"rank": 9, "start_time": "0700", "end_time": "1900"},
 }
 
 NIGHT_SHIFTS = {
@@ -81,3 +81,11 @@ STAFF_SHIFT_RESTRICTIONS: dict = {
 ORG_NAME     = "Staff Roster Generator"   # Displayed in the page title and header
 PAGE_LAYOUT  = "wide"                     # "wide" or "centered"
 PAGE_ICON    = "🚑"                       # Browser tab icon
+
+# ---------------------------------------------------------------------------
+# GITHUB PREFERENCES FILE
+# Set this to the raw URL of your preferences .xlsx file on GitHub.
+# Format: https://raw.githubusercontent.com/USERNAME/REPO/main/filename.xlsx
+# Set to None to disable auto-loading (manual upload only).
+# ---------------------------------------------------------------------------
+GITHUB_PREFS_URL = None   # e.g. "https://raw.githubusercontent.com/yourname/roster/main/Preferences.xlsx"
