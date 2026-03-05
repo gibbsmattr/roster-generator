@@ -735,10 +735,11 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
 
     st.markdown("---")
     st.markdown("### Visual check — current 14 days")
-    st.caption("Prior 2 days not shown. Click cells to edit, then hit 'Re-run with edits' to recalculate.")
+    st.caption("Prior 2 days not shown. Click cells to edit from dropdown, then hit 'Re-run with edits' to recalculate.")
 
     from modules.grid_scheduler import DAY_CODES, NIGHT_CODES
     from modules.config import ALL_SHIFTS as _AS
+    from datetime import datetime, timedelta
 
     def _cell_icon(val: str) -> str:
         v = val.strip()
@@ -751,14 +752,39 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
             return v  # Just return the value without emoji
         return v
 
+    # Build dropdown options: all shifts + common markers + blank
+    all_shift_codes = list(_AS.keys())
+    dropdown_options = ["", "D", "N", "D/N", "OFF", "LT", "LT-D", "LT-N", "AT", "SM", "Clinical", "LOA"] + all_shift_codes
+    
+    # Calculate day names starting with Sunday
+    start_day = 6  # 6=Sunday (0=Monday, 1=Tuesday... 6=Sunday)
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    
     table_rows = []
     for name, row in zip(names, output_grid):
         current = row[2:]
-        table_rows.append(
-            {"Name": name} | {f"Day {i+1}": _cell_icon(current[i]) for i in range(14)}
-        )
+        row_dict = {"Name": name}
+        for i in range(14):
+            day_name = day_names[(start_day + i) % 7]
+            row_dict[day_name] = _cell_icon(current[i])
+        table_rows.append(row_dict)
 
     df = pd.DataFrame(table_rows)
+    
+    # Configure columns: narrow for day columns, dropdown for editing
+    column_config = {
+        "Name": st.column_config.TextColumn("Name", width="medium")
+    }
+    
+    # Add config for each day column - narrow width and dropdown
+    for i in range(14):
+        day_name = day_names[(start_day + i) % 7]
+        column_config[day_name] = st.column_config.SelectboxColumn(
+            day_name,
+            width="small",
+            options=dropdown_options,
+            required=False
+        )
     
     # Use data_editor for editable table
     edited_df = st.data_editor(
@@ -766,7 +792,8 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
         hide_index=True, 
         use_container_width=True,
         height=min(60 + len(names)*35, 700),
-        key="editable_schedule"
+        key="editable_schedule",
+        column_config=column_config
     )
     
     # Add re-run button
@@ -783,7 +810,12 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
             prior_2 = orig_row[0:2]
             # Get edited 14 days from dataframe
             edited_row_data = edited_df.iloc[idx]
-            edited_14_days = [str(edited_row_data[f"Day {i+1}"]) for i in range(14)]
+            # Extract day values in correct order
+            edited_14_days = []
+            for i in range(14):
+                day_name = day_names[(start_day + i) % 7]
+                val = str(edited_row_data[day_name]) if pd.notna(edited_row_data[day_name]) else ""
+                edited_14_days.append(val)
             # Combine
             full_row = prior_2 + edited_14_days
             new_paste_lines.append(name + "\t" + "\t".join(full_row))
