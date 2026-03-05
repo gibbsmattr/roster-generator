@@ -440,12 +440,19 @@ def _assign_shifts_for_day(
     
     # CRITICAL FIX for grid scheduler:
     # Override final_actual to include ALL shifts in working_list
-    # This allows half-filled vehicles (medic without nurse or vice versa)
-    # Better to have someone assigned to a shift alone than left as "D" or "N"
-    metrics["final_actual"] = 9 if is_day_shift else 5
-    
-    # Don't override final_actual - let it be calculated naturally based on role counts
-    # The RosterGenerator already prioritizes completing shifts in rank order
+    # EXCEPT for NP (night only) - NP should only be available if we have enough staff
+    # to fully staff all 4 higher-priority night shifts first
+    if is_day_shift:
+        metrics["final_actual"] = 9  # All day shifts
+    else:
+        # For nights: check if we have enough staff to fully staff N7B, N7P, N9L, NG
+        # Each needs 2 people (medic + nurse) = 8 people minimum for all 4
+        # Only include NP (rank 5) if we have more than 8 people
+        num_staff = len(staff_names)
+        if num_staff >= 10:  # Enough to fill 4 shifts (8) + start NP (2)
+            metrics["final_actual"] = 5  # Include NP
+        else:
+            metrics["final_actual"] = 4  # Exclude NP (only N7B, N7P, N9L, NG)
     
     # Run roster generator with priority-based filling
     # For grid scheduler, disable No-Matrix rule to maximize assignments
@@ -460,21 +467,6 @@ def _assign_shifts_for_day(
     )
     
     shift_assignments = generator.generate_roster()
-    
-    # SPECIAL CASE FOR NP SHIFT (Night only):
-    # NP should ONLY be staffed if N7B, N7P, N9L, and NG are ALL fully staffed (2 people each)
-    # If NP has assignments but higher shifts aren't full, move those people to unassigned
-    if not is_day_shift and "NP" in shift_assignments and shift_assignments["NP"]:
-        # Check if all higher-priority night shifts are fully staffed
-        higher_priority_full = all(
-            shift_code in shift_assignments and len(shift_assignments[shift_code]) >= 2
-            for shift_code in ["N7B", "N7P", "N9L", "NG"]
-        )
-        
-        # If higher priorities aren't all full, clear NP assignments
-        # These people will be left unassigned (correct - we can't use NP yet)
-        if not higher_priority_full:
-            shift_assignments["NP"] = []
     
     # Build result dict with proper 'p' suffix for dual nurses working as medics
     # Get original roles from staff_df

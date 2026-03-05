@@ -217,27 +217,47 @@ def _try_load_github_prefs() -> pd.DataFrame | None:
 def render_preferences_section():
     """
     Preferences loader shown above the tabs.
-    1. On first load, silently try to fetch from GitHub.
-    2. Show the current source + a manual upload option.
-    3. Manual upload always wins if the user provides a file.
+    Priority order:
+    1. Check for local file in Preferences/preferences.xlsx
+    2. Try to fetch from GitHub
+    3. Manual upload option
+    Manual upload always wins if the user provides a file.
     """
     from modules import data_manager
+    import os
 
-    # ── Auto-fetch from GitHub on startup ───────────────────────────────
+    # ── Auto-load from local file or GitHub on startup ──────────────────────
     if st.session_state.get("staff_data_cache") is None and \
        st.session_state.get("prefs_source") is None:
-        with st.spinner("Loading staff preferences from GitHub…"):
-            df = _try_load_github_prefs()
-        if df is not None:
-            st.session_state.staff_data_cache = df
-            st.session_state.prefs_source = "github"
-            st.session_state.uploaded_filename = "preferences.xlsx (GitHub)"
+        
+        # First, try local file in Preferences folder
+        local_path = "Preferences/preferences.xlsx"
+        if os.path.exists(local_path):
+            try:
+                df = data_manager.load_staff_data_from_path(local_path)
+                st.session_state.staff_data_cache = df
+                st.session_state.prefs_source = "local"
+                st.session_state.uploaded_filename = "preferences.xlsx (Local)"
+            except Exception as e:
+                st.warning(f"Found local preferences file but couldn't load it: {e}")
+        
+        # If no local file, try GitHub
+        if st.session_state.get("staff_data_cache") is None:
+            with st.spinner("Loading staff preferences from GitHub…"):
+                df = _try_load_github_prefs()
+            if df is not None:
+                st.session_state.staff_data_cache = df
+                st.session_state.prefs_source = "github"
+                st.session_state.uploaded_filename = "preferences.xlsx (GitHub)"
 
-    # ── Status badge ─────────────────────────────────────────────────────
+    # ── Status badge ─────────────────────────────────────────────────────────
     source = st.session_state.get("prefs_source")
     fname  = st.session_state.get("uploaded_filename", "")
 
-    if source == "github":
+    if source == "local":
+        badge = '<span class="prefs-badge badge-github">✓ Local File</span>'
+        status_msg = f"Staff preferences loaded from local file {badge}"
+    elif source == "github":
         badge = '<span class="prefs-badge badge-github">✓ GitHub</span>'
         status_msg = f"Staff preferences loaded from GitHub {badge}"
     elif source == "upload":
@@ -253,7 +273,9 @@ def render_preferences_section():
     ):
         st.markdown(status_msg, unsafe_allow_html=True)
 
-        if source == "github":
+        if source == "local":
+            st.caption("Source: `Preferences/preferences.xlsx` (in repository)")
+        elif source == "github":
             st.caption(f"Source: `{GITHUB_PREFS_URL}`")
 
         st.markdown("**Upload a new preferences file** (replaces current):")
@@ -269,7 +291,7 @@ def render_preferences_section():
                 st.session_state.staff_data_cache = df
                 st.session_state.prefs_source = "upload"
                 st.session_state.uploaded_filename = uploaded.name
-                st.success(f"✅ Loaded **{uploaded.name}** — {len(df)} staff members.")
+                st.success(f"Loaded **{uploaded.name}** — {len(df)} staff members.")
             except Exception as e:
                 st.error(f"Failed to load file: {e}")
 
