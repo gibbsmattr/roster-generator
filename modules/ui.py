@@ -191,6 +191,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
+    st.caption("Version 9.0 - Diagnostic Logging Enabled")
 
 
 # ---------------------------------------------------------------------------
@@ -735,7 +736,7 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
     def _cell_icon(val: str) -> str:
         v = val.strip()
         if not v:
-            return "—"
+            return ""  # Leave blank cells empty instead of —
         if v in _AS:
             return v  # Just return the shift code without emoji
         vu = v.upper()

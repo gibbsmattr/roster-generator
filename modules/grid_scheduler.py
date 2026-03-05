@@ -473,7 +473,7 @@ def _assign_shifts_for_day(
     assigned_names = {name for shift_list in shift_assignments.values() for name, _, _ in shift_list}
     unassigned_names = [name for name in staff_names if name not in assigned_names]
     
-    if len(unassigned_names) > 3:  # Only log if many unassigned (indicates a problem)
+    if len(unassigned_names) >= 1:  # Show diagnostics if anyone is unassigned
         from modules.shift_utils import can_staff_work_shift
         from modules.config import DAY_SHIFTS, NIGHT_SHIFTS
         
