@@ -216,17 +216,24 @@ class RosterGenerator:
             if not orig_row.empty:
                 orig = orig_row.iloc[0]
                 for shift in eligible:
+                    shift_rank = self.shifts[shift].get("rank", 999)
                     if shift in self.staff_data.columns:
                         val = orig.get(shift, 0)
-                        if pd.notna(val) and float(val) > 0:
-                            prefs.append((shift, float(val)))
+                        pref_val = float(val) if pd.notna(val) and float(val) > 0 else 999
+                    else:
+                        pref_val = 999
+                    # Store (shift, rank, preference) tuple
+                    # We'll sort by rank first, then preference
+                    prefs.append((shift, shift_rank, pref_val))
 
-            # Sort by preference (lower number = higher priority).
-            prefs.sort(key=lambda x: x[1])
+            # Sort by shift rank FIRST (lower = higher priority), 
+            # then by preference value (lower = more preferred)
+            # This ensures higher-priority shifts are filled before lower-priority ones
+            prefs.sort(key=lambda x: (x[1], x[2]))
 
             assigned = False
             if prefs:
-                best_shift, pref_val = prefs[0]
+                best_shift, shift_rank, pref_val = prefs[0]
                 self.shift_assignments[best_shift].append((name, role, no_matrix))
                 self.logger.log_preference_assignment(name, best_shift, role, no_matrix, pref_val)
                 self._update_balls(best_shift, no_matrix)
