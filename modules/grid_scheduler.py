@@ -418,6 +418,7 @@ def _assign_shifts_for_day(
     """
     from modules import data_manager
     from modules.roster_generator import RosterGenerator
+    import streamlit as st
     
     # Filter staff_df to only those who need assignments
     filtered_staff = staff_df[staff_df["STAFF NAME"].isin(staff_names)].copy()
@@ -467,6 +468,53 @@ def _assign_shifts_for_day(
     )
     
     shift_assignments = generator.generate_roster()
+    
+    # DIAGNOSTIC LOGGING: Check why people weren't assigned
+    assigned_names = {name for shift_list in shift_assignments.values() for name, _, _ in shift_list}
+    unassigned_names = [name for name in staff_names if name not in assigned_names]
+    
+    if len(unassigned_names) > 3:  # Only log if many unassigned (indicates a problem)
+        from modules.shift_utils import can_staff_work_shift
+        from modules.config import DAY_SHIFTS, NIGHT_SHIFTS
+        
+        shifts_dict = DAY_SHIFTS if is_day_shift else NIGHT_SHIFTS
+        working_list = [
+            shift for shift, info in sorted(shifts_dict.items(), key=lambda x: x[1]["rank"])
+            if "rank" in info and int(info["rank"]) <= metrics["final_actual"]
+        ]
+        
+        st.warning(f"⚠️ {len(unassigned_names)} people left unassigned on this day. Diagnosing...")
+        
+        for person_name in unassigned_names[:5]:  # Check first 5 unassigned people
+            person_row = filtered_staff[filtered_staff["STAFF NAME"] == person_name]
+            if person_row.empty:
+                continue
+                
+            row = person_row.iloc[0]
+            role = row["ROLE"]
+            if role == "dual" and person_name in dual_assignments:
+                role = dual_assignments[person_name]
+            
+            no_matrix = int(row.get("No Matrix", 0)) if pd.notna(row.get("No Matrix")) else 0
+            reduced = bool(row.get("Reduced Rest OK", False))
+            
+            st.write(f"**{person_name}** ({role}, No-Matrix={no_matrix}):")
+            
+            for shift in working_list:
+                existing = shift_assignments[shift]
+                current_nm = sum(1 for s in existing if s[2] == 1)
+                balls_full = generator.no_matrix_shift_count >= generator.balls
+                
+                can_work, reason = can_staff_work_shift(
+                    person_name, role, shift, existing,
+                    prior_shifts, reduced, no_matrix,
+                    balls_full, current_nm, False  # No-Matrix rule disabled
+                )
+                
+                if not can_work:
+                    st.caption(f"  ❌ {shift}: {reason}")
+                else:
+                    st.caption(f"  ✓ {shift}: ELIGIBLE (but not assigned)")
     
     # Build result dict with proper 'p' suffix for dual nurses working as medics
     # Get original roles from staff_df
