@@ -191,7 +191,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 11.7 - Fixed: All 14 Days, No 'None', Proper Dropdowns")
+    st.caption("Version 11.8 - Editable Grid First, No 'None' Text")
 
 
 # ---------------------------------------------------------------------------
@@ -700,46 +700,14 @@ Any specific shift code like `D7B`, `N9L`, `MG`, etc.
 
 def display_grid_results(names: List[str], output_grid: List[List[str]],
                           warnings: List[str], stats: Dict):
-    """Show stats, warnings, copyable output grid, and a visual table."""
+    """Show editable grid first, then output grid, then stats/warnings."""
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Staff rows", stats.get("total_staff", 0))
-    c2.metric("Shifts assigned", stats.get("assigned", 0))
-    c3.metric("Left unresolved", stats.get("unresolved", 0))
-    c4.metric("Unknown names", stats.get("unknown_names", 0))
-
-    if warnings:
-        with st.expander(f"⚠️ {len(warnings)} warning(s)", expanded=False):
-            for w in warnings:
-                st.write(f"• {w}")
-
-    st.markdown("---")
-    st.markdown("### Output grid — copy this back into Excel")
-    st.caption(
-        "Select all text below (Ctrl+A / Cmd+A inside the box), copy, "
-        "then paste into the matching cells in Excel."
-    )
-
-    lines = []
-    for name, row in zip(names, output_grid):
-        lines.append(name + "\t" + "\t".join(row))
-    grid_text = "\n".join(lines)
-
-    st.text_area(
-        "Output (tab-separated, paste into Excel)",
-        value=grid_text,
-        height=340,
-        key="grid_output",
-        label_visibility="collapsed",
-    )
-
-    st.markdown("---")
-    st.markdown("### Visual check — current 14 days")
+    # ========== SECTION 1: EDITABLE GRID DISPLAY (FIRST) ==========
+    st.markdown("### Editable Grid Display")
     st.caption("Prior 2 days not shown. Click cells to edit from dropdown, then hit 'Re-run with edits' to recalculate.")
 
     from modules.grid_scheduler import DAY_CODES, NIGHT_CODES
     from modules.config import ALL_SHIFTS as _AS
-    from datetime import datetime, timedelta
 
     # Dropdown options in specific order
     dropdown_options = ["", "D", "N", "D/N", 
@@ -762,9 +730,9 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
         row_dict = {"Name": name}
         for i in range(14):
             val = current[i].strip() if current[i] else ""
-            # Replace None or empty with actual empty string
+            # Replace None or empty with None to display as truly blank
             if val == "None" or not val:
-                val = ""
+                val = None  # This makes it truly blank
             row_dict[column_headers[i]] = val
         table_rows.append(row_dict)
 
@@ -772,7 +740,7 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
     
     # Configure columns
     column_config = {
-        "Name": st.column_config.TextColumn("Name", width="small")  # Changed to small
+        "Name": st.column_config.TextColumn("Name", width="medium")
     }
     
     # Add config for each of the 14 day columns
@@ -828,6 +796,41 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
         st.session_state.grid_paste = new_paste_text
         st.session_state.rerun_requested = True
         st.rerun()
+
+    # ========== SECTION 2: OUTPUT GRID (SECOND) ==========
+    st.markdown("---")
+    st.markdown("### Output grid — copy this back into Excel")
+    st.caption(
+        "Select all text below (Ctrl+A / Cmd+A inside the box), copy, "
+        "then paste into the matching cells in Excel."
+    )
+
+    lines = []
+    for name, row in zip(names, output_grid):
+        lines.append(name + "\t" + "\t".join(row))
+    grid_text = "\n".join(lines)
+
+    st.text_area(
+        "Output (tab-separated, paste into Excel)",
+        value=grid_text,
+        height=340,
+        key="grid_output",
+        label_visibility="collapsed",
+    )
+
+    # ========== SECTION 3: STATS & WARNINGS (LAST) ==========
+    st.markdown("---")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Staff rows", stats.get("total_staff", 0))
+    c2.metric("Shifts assigned", stats.get("assigned", 0))
+    c3.metric("Left unresolved", stats.get("unresolved", 0))
+    c4.metric("Unknown names", stats.get("unknown_names", 0))
+
+    if warnings:
+        with st.expander(f"⚠️ {len(warnings)} warning(s)", expanded=False):
+            for w in warnings:
+                st.write(f"• {w}")
 
 
 def two_week_scheduler_section():
