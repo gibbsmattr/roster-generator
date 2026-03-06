@@ -107,9 +107,28 @@ with tab3:
                     names, output_grid, warnings, stats = run_grid_scheduler(
                         pasted_grid, st.session_state.staff_data_cache, night_only=night_only_setting
                     )
+                    
+                    # Store results in session state so they persist after edits
+                    st.session_state.last_results = {
+                        "names": names,
+                        "output_grid": output_grid,
+                        "warnings": warnings,
+                        "stats": stats
+                    }
+                    
                     ui.display_grid_results(names, output_grid, warnings, stats)
                 except Exception as exc:
                     import traceback; st.error(f"Error: {exc}"); st.error(traceback.format_exc())
+    
+    # Show last results if they exist (after a rerun with edits)
+    elif "last_results" in st.session_state and not run_grid:
+        results = st.session_state.last_results
+        ui.display_grid_results(
+            results["names"],
+            results["output_grid"],
+            results["warnings"],
+            results["stats"]
+        )
 
 with tab2:
     calc_input, calc_btn = ui.staffing_calculator_section()
