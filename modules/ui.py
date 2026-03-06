@@ -26,28 +26,221 @@ GITHUB_PREFS_URL = (
 
 _CUSTOM_CSS = """
 <style>
+/* Import Poppins font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 /* ── Global typography & background ─────────────────────────────────── */
 html, body, [class*="css"] {
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: 'Poppins', sans-serif;
 }
 
-/* Light header bar instead of dark */
+/* Apply to all text elements */
+h1, h2, h3, h4, h5, h6, p, span, div, label, button, input, textarea, select {
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Light header bar with subtle border */
 [data-testid="stHeader"] {
     background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
 }
 
-/* App background — very light blue-grey */
+/* Clean white app background */
 .stApp {
-    background-color: #f1f5f9;
+    background-color: #ffffff;
 }
 
-/* ── Main content card feel ─────────────────────────────────────────── */
+/* Main content with subtle shadow */
 section[data-testid="stMain"] > div {
-    padding-top: 1.2rem;
+    padding-top: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
-/* ── Title ──────────────────────────────────────────────────────────── */
+/* ── Title with gradient accent ──────────────────────────────────────── */
 h1 {
+    font-weight: 700;
+    font-size: 2.5rem !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.25rem;
+}
+
+/* Subtitle with modern color */
+.stCaptionContainer p {
+    color: #6b7280;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+/* ── Modern gradient buttons ─────────────────────────────────────────── */
+button[kind="primary"] {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.65rem 1.75rem;
+    box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 6px 20px rgba(59,130,246,0.4);
+    transform: translateY(-2px);
+}
+
+button[kind="secondary"] {
+    background: white;
+    color: #3b82f6;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.65rem 1.75rem;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+button[kind="secondary"]:hover {
+    background: #f9fafb;
+    border-color: #3b82f6;
+    color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(59,130,246,0.1);
+}
+
+/* ── Sleek metrics cards ─────────────────────────────────────────────── */
+[data-testid="stMetric"] {
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+    padding: 1.25rem;
+    border-radius: 1rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+[data-testid="stMetric"]:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+[data-testid="stMetricLabel"] {
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+[data-testid="stMetricValue"] {
+    color: #111827;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 0.25rem;
+}
+
+/* ── Modern expanders ────────────────────────────────────────────────── */
+.streamlit-expanderHeader {
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    font-weight: 600;
+    color: #374151;
+    padding: 1rem 1.25rem;
+    transition: all 0.2s ease;
+}
+.streamlit-expanderHeader:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* ── Text areas with modern styling ──────────────────────────────────── */
+textarea {
+    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace !important;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    outline: none;
+}
+
+/* ── Sleek data tables ───────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Table headers */
+[data-testid="stDataFrame"] thead {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+/* ── Modern dividers ─────────────────────────────────────────────────── */
+hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 2.5rem 0;
+}
+
+/* ── Alert boxes with modern styling ─────────────────────────────────── */
+.element-container div[data-testid="stAlert"] {
+    border-radius: 0.75rem;
+    border-left-width: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Success alerts */
+div[data-baseweb="notification"][kind="success"] {
+    background: #f0fdf4;
+    border-left-color: #22c55e;
+}
+
+/* Warning alerts */
+div[data-baseweb="notification"][kind="warning"] {
+    background: #fffbeb;
+    border-left-color: #f59e0b;
+}
+
+/* ── Input fields modern styling ─────────────────────────────────────── */
+input, select {
+    border-radius: 0.5rem !important;
+    border: 1px solid #e5e7eb !important;
+    transition: all 0.2s ease;
+}
+input:focus, select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1) !important;
+}
+
+/* ── Tabs modern styling ─────────────────────────────────────────────── */
+[data-baseweb="tab-list"] {
+    gap: 0.5rem;
+}
+[data-baseweb="tab"] {
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+/* ── Sidebar modern styling ──────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+}
+</style>
+"""
     color: #0f172a !important;
     font-weight: 700 !important;
     letter-spacing: -0.5px;
@@ -189,176 +382,9 @@ textarea:focus {
 
 def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
-    
-    # Font picker in sidebar
-    st.sidebar.markdown("### 🎨 Font Picker")
-    font_options = {
-        "Inter (Default)": "Inter",
-        "Roboto": "Roboto",
-        "Open Sans": "Open Sans",
-        "Lato": "Lato",
-        "Montserrat": "Montserrat",
-        "Poppins": "Poppins",
-        "Ubuntu": "Ubuntu",
-        "Work Sans": "Work Sans",
-        "Raleway": "Raleway",
-        "Nunito": "Nunito",
-        "Source Sans Pro": "Source Sans Pro",
-        "PT Sans": "PT Sans",
-        "Georgia": "Georgia",
-        "Times New Roman": "Times New Roman",
-        "Merriweather": "Merriweather"
-    }
-    
-    selected_font_name = st.sidebar.selectbox(
-        "Choose a font:",
-        options=list(font_options.keys()),
-        index=0,
-        help="Changes the font throughout the entire app. Pick your favorite!"
-    )
-    
-    selected_font = font_options[selected_font_name]
-    
-    # Dynamic CSS with selected font
-    dynamic_css = f"""
-    <style>
-    /* Import Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Ubuntu:wght@400;500;700&family=Work+Sans:wght@400;500;600&family=Raleway:wght@400;600;700&family=Nunito:wght@400;600;700&family=Source+Sans+Pro:wght@400;600;700&family=PT+Sans:wght@400;700&family=Merriweather:wght@400;700&display=swap');
-    
-    /* ── Global typography & background ─────────────────────────────────── */
-    html, body, [class*="css"] {{
-        font-family: '{selected_font}', 'Segoe UI', sans-serif !important;
-    }}
-    
-    /* Apply to all text elements */
-    h1, h2, h3, h4, h5, h6, p, span, div, label, button, input, textarea, select {{
-        font-family: '{selected_font}', 'Segoe UI', sans-serif !important;
-    }}
-    
-    /* Light header bar instead of dark */
-    [data-testid="stHeader"] {{
-        background: #ffffff;
-    }}
-    
-    /* App background — very light blue-grey */
-    .stApp {{
-        background-color: #f1f5f9;
-    }}
-    
-    /* ── Main content card feel ─────────────────────────────────────────── */
-    section[data-testid="stMain"] > div {{
-        padding-top: 1.2rem;
-    }}
-    
-    /* ── Title ──────────────────────────────────────────────────────────── */
-    h1 {{
-        font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 0.25rem;
-    }}
-    
-    /* ── Buttons (primary = gradient, secondary = outlined) ────────────── */
-    button[kind="primary"] {{
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        color: white;
-        border: none;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        padding: 0.5rem 1.5rem;
-        box-shadow: 0 4px 12px rgba(59,130,246,0.25);
-        transition: all 0.15s ease;
-    }}
-    button[kind="primary"]:hover {{
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        box-shadow: 0 6px 16px rgba(59,130,246,0.35);
-        transform: translateY(-1px);
-    }}
-    
-    button[kind="secondary"] {{
-        background: white;
-        color: #3b82f6;
-        border: 2px solid #3b82f6;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        padding: 0.5rem 1.5rem;
-        transition: all 0.15s ease;
-    }}
-    button[kind="secondary"]:hover {{
-        background: #eff6ff;
-        border-color: #2563eb;
-        transform: translateY(-1px);
-    }}
-    
-    /* ── Metrics ────────────────────────────────────────────────────────── */
-    [data-testid="stMetric"] {{
-        background: white;
-        padding: 1rem;
-        border-radius: 0.75rem;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 2px 6px rgba(15,23,42,0.04);
-    }}
-    [data-testid="stMetricLabel"] {{
-        color: #64748b;
-        font-size: 0.85rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-    }}
-    [data-testid="stMetricValue"] {{
-        color: #1e293b;
-        font-size: 1.75rem;
-        font-weight: 700;
-    }}
-    
-    /* ── Expander (collapsible sections) ────────────────────────────────── */
-    .streamlit-expanderHeader {{
-        background: white;
-        border-radius: 0.5rem;
-        border: 1px solid #e2e8f0;
-        font-weight: 600;
-        color: #334155;
-        padding: 0.75rem 1rem;
-    }}
-    .streamlit-expanderHeader:hover {{
-        background: #f8fafc;
-        border-color: #cbd5e1;
-    }}
-    
-    /* ── Text area (the copyable output grid) ───────────────────────────── */
-    textarea {{
-        font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        font-size: 0.9rem;
-    }}
-    
-    /* ── Data tables ────────────────────────────────────────────────────── */
-    [data-testid="stDataFrame"] {{
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }}
-    
-    /* ── Horizontal rule ────────────────────────────────────────────────── */
-    hr {{
-        border: none;
-        border-top: 2px solid #e2e8f0;
-        margin: 2rem 0;
-    }}
-    
-    /* ── Success/warning/error boxes ────────────────────────────────────── */
-    .element-container div[data-testid="stAlert"] {{
-        border-radius: 0.5rem;
-        border-left-width: 4px;
-    }}
-    </style>
-    """
-    
-    st.markdown(dynamic_css, unsafe_allow_html=True)
+    st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 12.0 - Live Font Picker!")
+    st.caption("Version 12.1 - Poppins Font & Modern Polish")
 
 
 # ---------------------------------------------------------------------------
