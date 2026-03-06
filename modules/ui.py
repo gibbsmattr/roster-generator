@@ -191,7 +191,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 11.6 - All 14 Days with Custom Dropdowns")
+    st.caption("Version 11.7 - Fixed: All 14 Days, No 'None', Proper Dropdowns")
 
 
 # ---------------------------------------------------------------------------
@@ -741,12 +741,6 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
     from modules.config import ALL_SHIFTS as _AS
     from datetime import datetime, timedelta
 
-    def _cell_icon(val: str) -> str:
-        v = val.strip()
-        if not v or v == "None":
-            return ""  # Leave blank cells empty
-        return v
-
     # Dropdown options in specific order
     dropdown_options = ["", "D", "N", "D/N", 
                        "D7B", "D7P", "D9L", "D11M", "D11H", "MG", "GR", "LG", "PG", "FLOAT",
@@ -756,31 +750,36 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
     # Day names cycle through the week, starting Sunday
     day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     
-    # Build column headers for all 14 days
+    # Build column headers for all 14 days (make unique with day number)
     column_headers = []
     for i in range(14):
-        day_name = day_names[i % 7]  # Cycles through week
-        column_headers.append(f"{day_name}")
+        day_name = day_names[i % 7]
+        column_headers.append(f"{day_name}_{i+1}")  # Sun_1, Mon_2, etc. for uniqueness
     
     table_rows = []
     for name, row in zip(names, output_grid):
         current = row[2:]  # Skip prior 2 days
         row_dict = {"Name": name}
         for i in range(14):
-            row_dict[column_headers[i]] = _cell_icon(current[i])
+            val = current[i].strip() if current[i] else ""
+            # Replace None or empty with actual empty string
+            if val == "None" or not val:
+                val = ""
+            row_dict[column_headers[i]] = val
         table_rows.append(row_dict)
 
     df = pd.DataFrame(table_rows)
     
-    # Configure columns: narrow for day columns, dropdown for editing
+    # Configure columns
     column_config = {
-        "Name": st.column_config.TextColumn("Name", width="medium")
+        "Name": st.column_config.TextColumn("Name", width="small")  # Changed to small
     }
     
     # Add config for each of the 14 day columns
-    for col_header in column_headers:
+    for i, col_header in enumerate(column_headers):
+        display_name = day_names[i % 7]  # Just show the day name without number
         column_config[col_header] = st.column_config.SelectboxColumn(
-            col_header,
+            display_name,  # Display name (Sun, Mon, etc.)
             width="small",
             options=dropdown_options,
             required=False
@@ -793,7 +792,8 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
         use_container_width=True,
         height=min(60 + len(names)*35, 700),
         key="editable_schedule",
-        column_config=column_config
+        column_config=column_config,
+        disabled=["Name"]  # Make Name column non-editable
     )
     
     # Add re-run button
@@ -813,10 +813,10 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
             for col_header in column_headers:
                 val = edited_row_data[col_header]
                 # Convert None or nan to empty string
-                if pd.isna(val) or val == "None" or val is None:
+                if pd.isna(val) or val == "None" or val is None or str(val).strip() == "":
                     val = ""
                 else:
-                    val = str(val)
+                    val = str(val).strip()
                 edited_14_days.append(val)
             # Combine
             full_row = prior_2 + edited_14_days
