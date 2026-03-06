@@ -31,9 +31,9 @@ html, body, [class*="css"] {
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
-/* Subtle dark-navy header bar */
+/* Light header bar instead of dark */
 [data-testid="stHeader"] {
-    background: #0f172a;
+    background: #ffffff;
 }
 
 /* App background — very light blue-grey */
@@ -191,7 +191,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 11.8 - Editable Grid First, No 'None' Text")
+    st.caption("Version 11.9 - PRO MAX Edition with Light Header")
 
 
 # ---------------------------------------------------------------------------

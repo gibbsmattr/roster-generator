@@ -78,7 +78,7 @@ STAFF_SHIFT_RESTRICTIONS: dict = {
 # ---------------------------------------------------------------------------
 # UI SETTINGS
 # ---------------------------------------------------------------------------
-ORG_NAME     = "Staff Roster Generator"   # Displayed in the page title and header
+ORG_NAME     = "Staff Roster Generator PRO MAX"   # Displayed in the page title and header
 PAGE_LAYOUT  = "wide"                     # "wide" or "centered"
 PAGE_ICON    = "🚑"                       # Browser tab icon
 
