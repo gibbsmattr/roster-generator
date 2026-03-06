@@ -194,7 +194,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 12.1 - Poppins Font")
+    st.caption("Version 12.2 - Fixed Empty Cells")
 
 
 # ---------------------------------------------------------------------------
@@ -733,13 +733,14 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
         row_dict = {"Name": name}
         for i in range(14):
             val = current[i].strip() if current[i] else ""
-            # Replace None or empty with None to display as truly blank
-            if val == "None" or not val:
-                val = None  # This makes it truly blank
+            # Keep truly empty for blank display
+            if val == "None" or not val or val == "nan":
+                val = ""  # Empty string instead of None
             row_dict[column_headers[i]] = val
         table_rows.append(row_dict)
 
-    df = pd.DataFrame(table_rows)
+    # Replace any remaining None/NaN values with empty string in the dataframe
+    df = pd.DataFrame(table_rows).fillna("")
     
     # Configure columns
     column_config = {
