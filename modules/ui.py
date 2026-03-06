@@ -189,9 +189,176 @@ textarea:focus {
 
 def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
-    st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
+    
+    # Font picker in sidebar
+    st.sidebar.markdown("### 🎨 Font Picker")
+    font_options = {
+        "Inter (Default)": "Inter",
+        "Roboto": "Roboto",
+        "Open Sans": "Open Sans",
+        "Lato": "Lato",
+        "Montserrat": "Montserrat",
+        "Poppins": "Poppins",
+        "Ubuntu": "Ubuntu",
+        "Work Sans": "Work Sans",
+        "Raleway": "Raleway",
+        "Nunito": "Nunito",
+        "Source Sans Pro": "Source Sans Pro",
+        "PT Sans": "PT Sans",
+        "Georgia": "Georgia",
+        "Times New Roman": "Times New Roman",
+        "Merriweather": "Merriweather"
+    }
+    
+    selected_font_name = st.sidebar.selectbox(
+        "Choose a font:",
+        options=list(font_options.keys()),
+        index=0,
+        help="Changes the font throughout the entire app. Pick your favorite!"
+    )
+    
+    selected_font = font_options[selected_font_name]
+    
+    # Dynamic CSS with selected font
+    dynamic_css = f"""
+    <style>
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Ubuntu:wght@400;500;700&family=Work+Sans:wght@400;500;600&family=Raleway:wght@400;600;700&family=Nunito:wght@400;600;700&family=Source+Sans+Pro:wght@400;600;700&family=PT+Sans:wght@400;700&family=Merriweather:wght@400;700&display=swap');
+    
+    /* ── Global typography & background ─────────────────────────────────── */
+    html, body, [class*="css"] {{
+        font-family: '{selected_font}', 'Segoe UI', sans-serif !important;
+    }}
+    
+    /* Apply to all text elements */
+    h1, h2, h3, h4, h5, h6, p, span, div, label, button, input, textarea, select {{
+        font-family: '{selected_font}', 'Segoe UI', sans-serif !important;
+    }}
+    
+    /* Light header bar instead of dark */
+    [data-testid="stHeader"] {{
+        background: #ffffff;
+    }}
+    
+    /* App background — very light blue-grey */
+    .stApp {{
+        background-color: #f1f5f9;
+    }}
+    
+    /* ── Main content card feel ─────────────────────────────────────────── */
+    section[data-testid="stMain"] > div {{
+        padding-top: 1.2rem;
+    }}
+    
+    /* ── Title ──────────────────────────────────────────────────────────── */
+    h1 {{
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }}
+    
+    /* ── Buttons (primary = gradient, secondary = outlined) ────────────── */
+    button[kind="primary"] {{
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+        transition: all 0.15s ease;
+    }}
+    button[kind="primary"]:hover {{
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        box-shadow: 0 6px 16px rgba(59,130,246,0.35);
+        transform: translateY(-1px);
+    }}
+    
+    button[kind="secondary"] {{
+        background: white;
+        color: #3b82f6;
+        border: 2px solid #3b82f6;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        transition: all 0.15s ease;
+    }}
+    button[kind="secondary"]:hover {{
+        background: #eff6ff;
+        border-color: #2563eb;
+        transform: translateY(-1px);
+    }}
+    
+    /* ── Metrics ────────────────────────────────────────────────────────── */
+    [data-testid="stMetric"] {{
+        background: white;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+    }}
+    [data-testid="stMetricLabel"] {{
+        color: #64748b;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }}
+    [data-testid="stMetricValue"] {{
+        color: #1e293b;
+        font-size: 1.75rem;
+        font-weight: 700;
+    }}
+    
+    /* ── Expander (collapsible sections) ────────────────────────────────── */
+    .streamlit-expanderHeader {{
+        background: white;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        font-weight: 600;
+        color: #334155;
+        padding: 0.75rem 1rem;
+    }}
+    .streamlit-expanderHeader:hover {{
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }}
+    
+    /* ── Text area (the copyable output grid) ───────────────────────────── */
+    textarea {{
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-size: 0.9rem;
+    }}
+    
+    /* ── Data tables ────────────────────────────────────────────────────── */
+    [data-testid="stDataFrame"] {{
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }}
+    
+    /* ── Horizontal rule ────────────────────────────────────────────────── */
+    hr {{
+        border: none;
+        border-top: 2px solid #e2e8f0;
+        margin: 2rem 0;
+    }}
+    
+    /* ── Success/warning/error boxes ────────────────────────────────────── */
+    .element-container div[data-testid="stAlert"] {{
+        border-radius: 0.5rem;
+        border-left-width: 4px;
+    }}
+    </style>
+    """
+    
+    st.markdown(dynamic_css, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 11.9 - PRO MAX Edition with Light Header")
+    st.caption("Version 12.0 - Live Font Picker!")
 
 
 # ---------------------------------------------------------------------------
