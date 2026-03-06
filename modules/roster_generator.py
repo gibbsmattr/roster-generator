@@ -29,6 +29,7 @@ class RosterGenerator:
         dual_role_assignments: Dict[str, str],
         is_day_shift: bool = True,
         enforce_no_matrix_rule: bool = True,
+        preference_first: bool = False,  # NEW: If True, sort by preference before rank
     ):
         self.staff_data           = staff_data
         self.prior_shifts         = prior_shifts
@@ -37,6 +38,7 @@ class RosterGenerator:
         self.dual_role_assignments = dual_role_assignments
         self.is_day_shift         = is_day_shift
         self.enforce_no_matrix_rule = enforce_no_matrix_rule
+        self.preference_first     = preference_first  # NEW
         self.logger               = get_logger()
 
         self.shifts              = DAY_SHIFTS if is_day_shift else NIGHT_SHIFTS
@@ -241,9 +243,14 @@ class RosterGenerator:
                     # Store (shift, completion_priority, rank, preference) tuple
                     prefs.append((shift, needs_completion, shift_rank, pref_val))
 
-            # Sort by: 1) completion (0=critical), 2) rank (lower=higher priority), 3) preference
-            # This ensures: complete D7B before starting D7P, complete D7P before starting D9L, etc.
-            prefs.sort(key=lambda x: (x[1], x[2], x[3]))
+            # Sort by: 
+            # If preference_first=True: 1) completion, 2) preference, 3) rank
+            # If preference_first=False: 1) completion, 2) rank, 3) preference
+            # This ensures: complete critical shifts first, then either rank or preference priority
+            if self.preference_first:
+                prefs.sort(key=lambda x: (x[1], x[3], x[2]))  # completion, preference, rank
+            else:
+                prefs.sort(key=lambda x: (x[1], x[2], x[3]))  # completion, rank, preference
 
             assigned = False
             if prefs:

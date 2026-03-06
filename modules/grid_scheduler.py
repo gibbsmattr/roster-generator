@@ -451,13 +451,29 @@ def _assign_shifts_for_day(
     # Override final_actual to include ALL shifts in working_list
     # EXCEPT for NP (night only) - NP should only be available if we have enough staff
     # to fully staff all 4 higher-priority night shifts first
+    
+    # NEW: Check if we can fully staff critical night shifts to enable preference-first mode
+    preference_first_mode = False
+    
     if is_day_shift:
         metrics["final_actual"] = 9  # All day shifts
     else:
         # For nights: check if we have enough staff to fully staff N7B, N7P, N9L, NG
         # Each needs 2 people (medic + nurse) = 8 people minimum for all 4
-        # Only include NP (rank 5) if we have more than 8 people
         num_staff = len(staff_names)
+        
+        # Count available medics and nurses
+        medics = sum(1 for name in staff_names 
+                    if staff_lookup.get(name, {}).get("ROLE") in ["medic", "dual"])
+        nurses = sum(1 for name in staff_names 
+                    if staff_lookup.get(name, {}).get("ROLE") in ["nurse", "dual"])
+        
+        # If we have at least 4 medics and 4 nurses (enough for all 4 critical shifts)
+        # Enable preference-first mode so senior staff get their preferred bases
+        if medics >= 4 and nurses >= 4 and num_staff >= 8:
+            preference_first_mode = True
+        
+        # Determine if NP should be included
         if num_staff >= 10:  # Enough to fill 4 shifts (8) + start NP (2)
             metrics["final_actual"] = 5  # Include NP
         else:
@@ -465,6 +481,7 @@ def _assign_shifts_for_day(
     
     # Run roster generator with priority-based filling
     # For grid scheduler, disable No-Matrix rule to maximize assignments
+    # For nights with enough staff, enable preference_first so seniority gets preferred bases
     generator = RosterGenerator(
         filtered_staff,
         prior_shifts,
@@ -473,6 +490,7 @@ def _assign_shifts_for_day(
         dual_assignments,
         is_day_shift=is_day_shift,
         enforce_no_matrix_rule=False,  # Allow pairing any two people to maximize assignments
+        preference_first=preference_first_mode,  # Enable for nights when fully staffable
     )
     
     shift_assignments = generator.generate_roster()
