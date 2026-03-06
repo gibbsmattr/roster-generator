@@ -191,7 +191,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 11.5 - Interactive Editing with Dropdowns & Day Names")
+    st.caption("Version 11.6 - All 14 Days with Custom Dropdowns")
 
 
 # ---------------------------------------------------------------------------
@@ -743,30 +743,31 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
 
     def _cell_icon(val: str) -> str:
         v = val.strip()
-        if not v:
-            return ""  # Leave blank cells empty instead of —
-        if v in _AS:
-            return v  # Just return the shift code without emoji
-        vu = v.upper()
-        if vu in ("D", "D/N") or vu.startswith("D") or vu == "N":
-            return v  # Just return the value without emoji
+        if not v or v == "None":
+            return ""  # Leave blank cells empty
         return v
 
-    # Build dropdown options: all shifts + common markers + blank
-    all_shift_codes = list(_AS.keys())
-    dropdown_options = ["", "D", "N", "D/N", "OFF", "LT", "LT-D", "LT-N", "AT", "SM", "Clinical", "LOA"] + all_shift_codes
+    # Dropdown options in specific order
+    dropdown_options = ["", "D", "N", "D/N", 
+                       "D7B", "D7P", "D9L", "D11M", "D11H", "MG", "GR", "LG", "PG", "FLOAT",
+                       "N7B", "N7P", "N9L", "NG", "NP",
+                       "OFF", "LT", "LT-D", "LT-N", "AT", "SM", "Clinical", "LOA"]
     
-    # Calculate day names starting with Sunday
-    start_day = 6  # 6=Sunday (0=Monday, 1=Tuesday... 6=Sunday)
-    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    # Day names cycle through the week, starting Sunday
+    day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    
+    # Build column headers for all 14 days
+    column_headers = []
+    for i in range(14):
+        day_name = day_names[i % 7]  # Cycles through week
+        column_headers.append(f"{day_name}")
     
     table_rows = []
     for name, row in zip(names, output_grid):
-        current = row[2:]
+        current = row[2:]  # Skip prior 2 days
         row_dict = {"Name": name}
         for i in range(14):
-            day_name = day_names[(start_day + i) % 7]
-            row_dict[day_name] = _cell_icon(current[i])
+            row_dict[column_headers[i]] = _cell_icon(current[i])
         table_rows.append(row_dict)
 
     df = pd.DataFrame(table_rows)
@@ -776,11 +777,10 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
         "Name": st.column_config.TextColumn("Name", width="medium")
     }
     
-    # Add config for each day column - narrow width and dropdown
-    for i in range(14):
-        day_name = day_names[(start_day + i) % 7]
-        column_config[day_name] = st.column_config.SelectboxColumn(
-            day_name,
+    # Add config for each of the 14 day columns
+    for col_header in column_headers:
+        column_config[col_header] = st.column_config.SelectboxColumn(
+            col_header,
             width="small",
             options=dropdown_options,
             required=False
@@ -803,18 +803,20 @@ def display_grid_results(names: List[str], output_grid: List[List[str]],
     
     if rerun_btn:
         # Convert edited dataframe back to paste format
-        # Reconstruct full 16-column grid (add back prior 2 days)
         new_paste_lines = []
         for idx, (name, orig_row) in enumerate(zip(names, output_grid)):
             # Get prior 2 days from original
             prior_2 = orig_row[0:2]
             # Get edited 14 days from dataframe
             edited_row_data = edited_df.iloc[idx]
-            # Extract day values in correct order
             edited_14_days = []
-            for i in range(14):
-                day_name = day_names[(start_day + i) % 7]
-                val = str(edited_row_data[day_name]) if pd.notna(edited_row_data[day_name]) else ""
+            for col_header in column_headers:
+                val = edited_row_data[col_header]
+                # Convert None or nan to empty string
+                if pd.isna(val) or val == "None" or val is None:
+                    val = ""
+                else:
+                    val = str(val)
                 edited_14_days.append(val)
             # Combine
             full_row = prior_2 + edited_14_days
