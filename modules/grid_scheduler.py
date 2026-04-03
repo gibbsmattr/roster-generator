@@ -465,13 +465,13 @@ def _assign_shifts_for_day(
         nurses = sum(1 for name in staff_names 
                     if staff_lookup.get(name, {}).get("ROLE") in ["nurse", "dual"])
         
-        # For days: Need at least 7 medics and 7 nurses to fully staff critical shifts
-        # D7B, D7P, D9L, D11M, D11H, MG, GR = 7 shifts × 2 people = 14 minimum
-        if medics >= 7 and nurses >= 7 and num_staff >= 14:
+        # Enable preference_first if we have at least 2 medics and 2 nurses
+        # This means we can make at least 1 complete shift, so let seniority pick their base
+        if medics >= 2 and nurses >= 2:
             preference_first_mode = True
     else:
-        # For nights: check if we have enough staff to fully staff N7B, N7P, N9L, NG
-        # Each needs 2 people (medic + nurse) = 8 people minimum for all 4
+        # For nights: Enable preference_first if we have enough staff to make at least 1 complete shift
+        # and we're not critically short-staffed
         num_staff = len(staff_names)
         
         # Count available medics and nurses
@@ -480,9 +480,10 @@ def _assign_shifts_for_day(
         nurses = sum(1 for name in staff_names 
                     if staff_lookup.get(name, {}).get("ROLE") in ["nurse", "dual"])
         
-        # If we have at least 4 medics and 4 nurses (enough for all 4 critical shifts)
-        # Enable preference-first mode so senior staff get their preferred bases
-        if medics >= 4 and nurses >= 4 and num_staff >= 8:
+        # Enable preference-first if we have at least 2 medics and 2 nurses
+        # This means we can make at least 1 complete shift, so let seniority pick their base
+        # The limiting factor (fewer medics or nurses) determines how many shifts we can make
+        if medics >= 2 and nurses >= 2:
             preference_first_mode = True
         
         # Determine if NP should be included
