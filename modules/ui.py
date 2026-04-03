@@ -194,7 +194,7 @@ def setup_page():
     st.set_page_config(page_title=ORG_NAME, layout=PAGE_LAYOUT, page_icon=PAGE_ICON)
     st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
     st.title(f"{PAGE_ICON} {ORG_NAME}")
-    st.caption("Version 13.3 - Seniority-Based Bumping")
+    st.caption("Version 13.5 - Pure Preference Mode (No Completion Priority)")
 
 
 # ---------------------------------------------------------------------------

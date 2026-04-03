@@ -244,23 +244,33 @@ class RosterGenerator:
                     prefs.append((shift, needs_completion, shift_rank, pref_val))
 
             # Sort by: 
-            # If preference_first=True: 1) completion, 2) preference, 3) rank
+            # If preference_first=True: ONLY preference (ignore completion and rank)
             # If preference_first=False: 1) completion, 2) rank, 3) preference
-            # This ensures: complete critical shifts first, then either rank or preference priority
+            # This ensures: in preference mode, seniority gets exact preference without being forced to complete shifts
             if self.preference_first:
-                prefs.sort(key=lambda x: (x[1], x[3], x[2]))  # completion, preference, rank
+                prefs.sort(key=lambda x: x[3])  # preference ONLY
             else:
                 prefs.sort(key=lambda x: (x[1], x[2], x[3]))  # completion, rank, preference
 
             assigned = False
-            if prefs:
-                best_shift, completion, shift_rank, pref_val = prefs[0]
+            
+            # Try each preference in order until we can assign or bump
+            for pref_idx, (shift_name, completion, shift_rank, pref_val) in enumerate(prefs):
+                if assigned:
+                    break
                 
-                # In preference_first mode with seniority, check if we can bump someone less senior
-                if self.preference_first and len(self.shift_assignments[best_shift]) > 0:
-                    # Check if there's a less senior person (higher seniority number) on this shift
-                    # who could be moved to make room for this more senior person
-                    current_occupants = self.shift_assignments[best_shift]
+                current_occupants = self.shift_assignments[shift_name]
+                
+                # Case 1: Shift has space - just assign
+                if len(current_occupants) < 2:
+                    self.shift_assignments[shift_name].append((name, role, no_matrix))
+                    self.logger.log_preference_assignment(name, shift_name, role, no_matrix, pref_val)
+                    self._update_balls(shift_name, no_matrix)
+                    assigned = True
+                    break
+                
+                # Case 2: Shift is full - try bumping in preference_first mode
+                if self.preference_first:
                     my_seniority = row.get("Seniority", 999)
                     
                     # Find if there's someone less senior with same role on this shift
@@ -272,28 +282,21 @@ class RosterGenerator:
                                 # If I'm more senior (lower number) than the occupant
                                 if my_seniority < occupant_seniority:
                                     # Remove the less senior person
-                                    self.shift_assignments[best_shift].remove((occupant_name, occupant_role, occupant_nm))
+                                    self.shift_assignments[shift_name].remove((occupant_name, occupant_role, occupant_nm))
                                     # Add me
-                                    self.shift_assignments[best_shift].append((name, role, no_matrix))
-                                    self.logger.log_preference_assignment(name, best_shift, role, no_matrix, pref_val)
-                                    self._update_balls(best_shift, no_matrix)
+                                    self.shift_assignments[shift_name].append((name, role, no_matrix))
+                                    self.logger.log_preference_assignment(name, shift_name, role, no_matrix, pref_val)
+                                    self._update_balls(shift_name, no_matrix)
                                     assigned = True
                                     
                                     # Add the bumped person back to the queue to be reassigned
-                                    # They'll get processed and find their next best option
                                     bumped_row = self.staff_data[self.staff_data["STAFF NAME"] == occupant_name]
                                     if not bumped_row.empty:
                                         current = pd.concat([current, bumped_row], ignore_index=True)
                                     break
-                
-                # If not assigned via bumping, assign normally if shift has space
-                if not assigned and len(self.shift_assignments[best_shift]) < 2:
-                    self.shift_assignments[best_shift].append((name, role, no_matrix))
-                    self.logger.log_preference_assignment(name, best_shift, role, no_matrix, pref_val)
-                    self._update_balls(best_shift, no_matrix)
-                    assigned = True
-            elif eligible:
-                # Shouldn't reach here with new logic, but fallback to first eligible
+            
+            # If still not assigned and have eligible shifts, try first eligible as fallback
+            if not assigned and eligible:
                 best_shift = eligible[0]
                 if len(self.shift_assignments[best_shift]) < 2:
                     self.shift_assignments[best_shift].append((name, role, no_matrix))
